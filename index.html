@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbhold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a12; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Press Start 2P', cursive; }
+  #game-container { position: relative; width: 100vw; height: 100vh; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+  #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* ---- LEADERBOARD ---- */
+  #leaderboard {
+    position: absolute; top: 10px; right: 10px;
+    background: #12121e;
+    border: 3px solid #2a2a3e;
+    box-shadow: 0 0 0 1px #0a0a12, inset 0 0 12px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.6);
+    padding: 0; min-width: 170px;
+    color: #c8c8e0; font-size: 10px;
+    image-rendering: pixelated;
+  }
+  #leaderboard::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #6a5acd, #ff6b9d, #6a5acd, transparent);
+    opacity: 0.7;
+  }
+  .lb-header {
+    background: #1a1a2e;
+    padding: 6px 10px;
+    font-size: 7px;
+    color: #6a5acd;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-bottom: 2px solid #2a2a3e;
+    text-align: center;
+  }
+  .lb-header::before { content: '~ '; color: #ff6b9d; }
+  .lb-header::after { content: ' ~'; color: #ff6b9d; }
+  #leaderboard table { width: 100%; border-collapse: collapse; }
+  #leaderboard thead { display: none; }
+  #leaderboard td {
+    padding: 3px 8px;
+    border-bottom: 1px solid #1a1a2e;
+    font-size: 9px;
+  }
+  #leaderboard tr:last-child td { border-bottom: none; }
+  #leaderboard td:first-child {
+    color: #555;
+    font-size: 8px;
+    width: 20px;
+    text-align: center;
+  }
+  #leaderboard td:last-child {
+    text-align: right;
+    color: #888;
+    font-size: 8px;
+  }
+  #leaderboard .highlight td { color: #7dffb3; }
+  #leaderboard .highlight td:first-child { color: #4ae080; }
+  #leaderboard .highlight td:last-child { color: #4ae080; }
+  #leaderboard tr:nth-child(1) td:first-child { color: #ffd700; }
+  #leaderboard tr:nth-child(2) td:first-child { color: #c0c0c0; }
+  #leaderboard tr:nth-child(3) td:first-child { color: #cd7f32; }
+
+  /* ---- SCREENS (start & end) ---- */
+  #start-screen, #end-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background: radial-gradient(ellipse at center, rgba(15,12,30,0.92) 0%, rgba(5,3,15,0.97) 100%);
+    pointer-events: auto; cursor: pointer;
+  }
+
+  /* ---- START SCREEN ---- */
+  .title-container {
+    position: relative;
+    margin-bottom: 24px;
+  }
+  #start-screen h1 {
+    font-size: 32px;
+    color: #ff4444;
+    text-shadow:
+      0 0 10px rgba(255,68,68,0.6),
+      0 0 40px rgba(255,68,68,0.3),
+      0 4px 0 #661111;
+    letter-spacing: 2px;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 10px rgba(255,68,68,0.6), 0 0 40px rgba(255,68,68,0.3), 0 4px 0 #661111; }
+    50% { text-shadow: 0 0 20px rgba(255,68,68,0.8), 0 0 60px rgba(255,68,68,0.4), 0 4px 0 #661111; }
+  }
+  .title-underline {
+    width: 80%;
+    height: 2px;
+    margin: 8px auto 0;
+    background: linear-gradient(90deg, transparent, #ff6b9d, #6a5acd, #ff6b9d, transparent);
+    animation: shimmer 2s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: 200px 0; }
+  }
+
+  .subtitle {
+    color: #8888aa;
+    font-size: 9px;
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+  .controls-text {
+    color: #6a6a8a;
+    font-size: 8px;
+    margin-top: 10px;
+  }
+  .controls-text span {
+    color: #9090b0;
+    background: #1a1a2e;
+    border: 1px solid #2a2a3e;
+    padding: 2px 6px;
+    margin: 0 2px;
+  }
+
+  /* ---- OPTION ROWS ---- */
+  .options-panel {
+    background: #12121e;
+    border: 2px solid #2a2a3e;
+    padding: 16px 24px;
+    margin-top: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 0 12px rgba(0,0,0,0.3);
+  }
+  .option-row {
+    display: flex; justify-content: center; align-items: center;
+    margin-top: 10px; gap: 10px;
+  }
+  .option-row:first-child { margin-top: 0; }
+  .option-label {
+    color: #6a5acd;
+    font-size: 7px;
+    width: 80px;
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .option-buttons button {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 8px;
+    background: #1a1a2e;
+    color: #6a6a8a;
+    border: 2px solid #2a2a3e;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .option-buttons button:hover {
+    border-color: #6a5acd;
+    color: #aaa;
+    background: #1e1e32;
+  }
+  .option-buttons button.selected {
+    background: linear-gradient(180deg, #6a5acd 0%, #4a3aad 100%);
+    color: #fff;
+    border-color: #8a7aed;
+    box-shadow: 0 0 8px rgba(106,90,205,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  /* ---- START BUTTON AREA ---- */
+  .start-prompt {
+    margin-top: 24px;
+    color: #7dffb3;
+    font-size: 10px;
+    letter-spacing: 2px;
+    animation: blink 1.5s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .pixel-divider {
+    width: 4px; height: 4px;
+    background: #2a2a3e;
+    margin: 16px auto;
+    box-shadow:
+      8px 0 0 #2a2a3e, 16px 0 0 #2a2a3e, 24px 0 0 #2a2a3e,
+      -8px 0 0 #2a2a3e, -16px 0 0 #2a2a3e, -24px 0 0 #2a2a3e;
+  }
+
+  /* ---- END SCREEN ---- */
+  #end-screen h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+    letter-spacing: 3px;
+  }
+  .victory-text {
+    color: #ffd700;
+    text-shadow:
+      0 0 15px rgba(255,215,0,0.6),
+      0 0 40px rgba(255,215,0,0.2),
+      0 3px 0 #997a00;
+    animation: victoryGlow 2s ease-in-out infinite;
+  }
+  @keyframes victoryGlow {
+    0%, 100% { text-shadow: 0 0 15px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.2), 0 3px 0 #997a00; filter: brightness(1); }
+    50% { text-shadow: 0 0 25px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.4), 0 3px 0 #997a00; filter: brightness(1.1); }
+  }
+  .defeat-text {
+    color: #ff4444;
+    text-shadow:
+      0 0 15px rgba(255,68,68,0.5),
+      0 3px 0 #661111;
+  }
+  #end-screen p {
+    color: #8888aa;
+    font-size: 10px;
+    margin-bottom: 16px;
+  }
+  #end-screen .restart {
+    color: #6a6a8a;
+    font-size: 8px;
+    animation: blink 1.5s step-end infinite;
+  }
+
+  /* ---- NEW GAME BUTTON ---- */
+  #new-game-btn {
+    pointer-events: auto; cursor: pointer;
+    margin-top: 10px; padding: 8px 16px;
+    font-family: 'Press Start 2P', cursive; font-size: 8px;
+    color: #fff;
+    background: linear-gradient(180deg, #cc3333 0%, #992222 100%);
+    border: 2px solid #ff4444;
+    box-shadow: 0 0 10px rgba(255,68,68,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+    transition: all 0.1s;
+  }
+  #new-game-btn:hover {
+    background: linear-gradient(180deg, #dd4444 0%, #aa3333 100%);
+    box-shadow: 0 0 16px rgba(255,68,68,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+    transform: translateY(-1px);
+  }
+  #new-game-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 0 6px rgba(255,68,68,0.3);
+  }
+
+  .hidden { display: none !important; }
+
+  /* ---- SCANLINE OVERLAY ---- */
+  #start-screen::after, #end-screen::after {
+    content: '';
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ---- CORNER DECORATIONS ---- */
+  .corner-decor {
+    position: absolute;
+    width: 16px; height: 16px;
+    opacity: 0.25;
+  }
+  .corner-decor::before, .corner-decor::after {
+    content: '';
+    position: absolute;
+    background: #6a5acd;
+  }
+  .corner-tl { top: 20px; left: 20px; }
+  .corner-tl::before { top: 0; left: 0; width: 16px; height: 2px; }
+  .corner-tl::after { top: 0; left: 0; width: 2px; height: 16px; }
+  .corner-tr { top: 20px; right: 20px; }
+  .corner-tr::before { top: 0; right: 0; width: 16px; height: 2px; }
+  .corner-tr::after { top: 0; right: 0; width: 2px; height: 16px; }
+  .corner-bl { bottom: 20px; left: 20px; }
+  .corner-bl::before { bottom: 0; left: 0; width: 16px; height: 2px; }
+  .corner-bl::after { bottom: 0; left: 0; width: 2px; height: 16px; }
+  .corner-br { bottom: 20px; right: 20px; }
+  .corner-br::before { bottom: 0; right: 0; width: 16px; height: 2px; }
+  .corner-br::after { bottom: 0; right: 0; width: 2px; height: 16px; }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="canvas"></canvas>
+  <div id="hud">
+    <div id="leaderboard">
+      <div class="lb-header">Leaderboard</div>
+      <table><thead><tr><th>#</th><th>Name</th><th>Army</th></tr></thead><tbody id="lb-body"></tbody></table>
+      <button id="new-game-btn" class="hidden">New Game</button>
+    </div>
+  </div>
+  <div id="start-screen">
+    <div class="corner-decor corner-tl"></div>
+    <div class="corner-decor corner-tr"></div>
+    <div class="corner-decor corner-bl"></div>
+    <div class="corner-decor corner-br"></div>
+    <div class="title-container">
+      <h1>Orbhold</h1>
+      <div class="title-underline"></div>
+    </div>
+    <p class="subtitle">Conquer all.</p>
+    <div class="pixel-divider"></div>
+    <p class="controls-text"><span>WASD</span> / <span>Arrows</span> / <span>Touch/Click</span> to move</p>
+    <div class="options-panel">
+      <div class="option-row">
+        <span class="option-label">Map Size</span>
+        <span class="option-buttons" id="map-size-options">
+          <button data-value="32">32</button>
+          <button data-value="48" class="selected">48</button>
+          <button data-value="64">64</button>
+          <button data-value="96">96</button>
+        </span>
+      </div>
+      <div class="option-row">
+        <span class="option-label">Enemies</span>
+        <span class="option-buttons" id="enemy-count-options">
+          <button data-value="4">4</button>
+          <button data-value="5">5</button>
+          <button data-value="6">6</button>
+          <button data-value="7" class="selected">7</button>
+          <button data-value="8">8</button>
+          <button data-value="9">9</button>
+        </span>
+      </div>
+    </div>
+    <p class="start-prompt">Click to Start</p>
+  </div>
+  <div id="end-screen" class="hidden">
+    <div class="corner-decor corner-tl"></div>
+    <div class="corner-decor corner-tr"></div>
+    <div class="corner-decor corner-bl"></div>
+    <div class="corner-decor corner-br"></div>
+    <h1 id="winner-text">Winner!</h1>
+    <p id="winner-detail"></p>
+    <div class="pixel-divider"></div>
+    <p class="restart">Click to play again</p>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
