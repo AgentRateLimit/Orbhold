@@ -1,5 +1,8 @@
 # Orbhold
 
+
+![Screen 2](preview.webp)
+
 A browser-based arena game built with vanilla JavaScript. Grow your army by collecting slimes, clash with rival players, and be the last one standing — or the biggest when time runs out.
 
 ## How to Play
