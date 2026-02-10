@@ -109,6 +109,7 @@ async function loadAllAssets() {
   promises.push(loadImage('images/Greatsword_6.png').then(img => { assets['Greatsword_6.png'] = img; }));
   promises.push(loadImage('images/arrow.png').then(img => { assets['arrow.png'] = img; }));
   promises.push(loadImage('images/magic.png').then(img => { assets['magic.png'] = img; }));
+  promises.push(loadImage('images/blood.png').then(img => { assets['blood.png'] = img; }));
   for (const name of CHARACTER_SHEETS) {
     promises.push(loadImage(`images/characters/${name}`).then(img => { assets[name] = img; }));
   }
@@ -1260,6 +1261,12 @@ function gameLoop(timestamp) {
     // Draw map
     renderMap(ctx, camX, camY);
 
+    // Draw blood splats on the ground (under entities, until slime spawns)
+    const bloodImg = assets['blood.png'];
+    for (const s of scheduledSlimes) {
+      ctx.drawImage(bloodImg, s.x - 8 - camX, s.y - 8 - camY, 16, 16);
+    }
+
     // Collect all drawable entities and Y-sort (reuse module-level array)
     drawables.length = 0;
     for (const s of slimes) {
@@ -1325,11 +1332,11 @@ function gameLoop(timestamp) {
       ctx.fillRect(mmX + s.x * scale - 0.5, mmY + s.y * scale - 0.5, 1.5, 1.5);
     }
 
-    // Players
+    // Players (dot size scales with army size)
     for (const p of players) {
       if (!p.alive) continue;
       ctx.fillStyle = p.isHuman ? '#7dffb3' : '#ff5555';
-      const dotSize = p.isHuman ? 4 : 3;
+      const dotSize = 2 + Math.min(p.charCount, 20) * 0.3;
       ctx.fillRect(mmX + p.x * scale - dotSize / 2, mmY + p.y * scale - dotSize / 2, dotSize, dotSize);
     }
 
